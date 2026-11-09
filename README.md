@@ -13,7 +13,7 @@ Nothing is stored or sent anywhere. Closing the tab clears the answers.
 
 ## What is scored
 * **Waterlow** (2005 revision) with the built in Malnutrition Screening Tool, an optional BMI calculator, and special risks. Bands: under 10 not at risk, 10 to 14 at risk, 15 to 19 high risk, 20 and over very high risk.
-  * **Age adjusted BMI for 65 and over.** Build bands become under 23 below average (3), 23 to 29.9 average (0), 30 to 34.9 above average (1), 35 and over obese (2), based on [Winter et al 2014, Am J Clin Nutr](https://pubmed.ncbi.nlm.nih.gov/24452240/). Under 65 uses the standard card bands. The PDF notes when age adjusted bands were used.
+  * **Age based BMI cut off.** Age 70 and over scores Below average (3) for a BMI under 22 instead of under 20, using the international [GLIM criteria for malnutrition (Cederholm et al 2019)](https://pubmed.ncbi.nlm.nih.gov/30181091/). Other bands follow the Waterlow card. Enter age in years to tick the age band automatically (needed for 65 to 74, since 70 falls inside that band). The PDF notes when the 70 and over cut off was used.
 * **Braden** (adult). Bands: 19 to 23 no risk, 15 to 18 mild, 13 to 14 moderate, 10 to 12 high, 9 or less very high.
 
 ## Rebuilding
