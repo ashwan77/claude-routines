@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Pressure Risk Calculator</title>
+<style>
+:root {
+  --bg: #f3f5f7;
+  --card: #ffffff;
+  --ink: #1d2733;
+  --muted: #5b6875;
+  --line: #d9e0e6;
+  --brand: #0f6e74;
+  --brand-ink: #ffffff;
+  --brand-soft: #e3f1f2;
+  --warn: #b3261e;
+  --sel: #0f6e74;
+  --sel-soft: #e6f3f3;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding-bottom: 110px;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header.top {
+  background: var(--brand);
+  color: var(--brand-ink);
+  padding: 18px 0 16px;
+}
+header.top h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+header.top p { margin: 2px 0 0; opacity: 0.85; font-size: 14px; }
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-top: 16px;
+}
+.details { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.field input {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.field input:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.field.missing input { border-color: var(--warn); box-shadow: 0 0 0 2px rgba(179, 38, 30, 0.15); }
+
+.picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.picker button {
+  font: inherit;
+  text-align: left;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+}
+.picker button strong { display: block; font-size: 18px; }
+.picker button span { color: var(--muted); font-size: 13px; }
+.picker button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); box-shadow: inset 0 0 0 1px var(--brand); }
+.picker button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+.intro { margin: 18px 2px 4px; color: var(--muted); font-size: 14px; }
+.group-h { margin: 26px 2px 4px; display: flex; align-items: center; gap: 8px; }
+.group-h h2 { margin: 0; font-size: 17px; }
+.group-h + .group-note { margin: 0 2px 6px; color: var(--muted); font-size: 13px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+  margin-top: 12px;
+  scroll-margin-top: 16px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.card.done { border-left: 4px solid var(--brand); }
+.card.flash { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.2); }
+.card-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.card-h h3 { margin: 0; font-size: 16px; }
+.card-h .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: #eef1f4; border-radius: 99px; padding: 2px 8px; }
+.card-h .sec-score { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.card .note { margin: -4px 0 10px; color: var(--muted); font-size: 13px; }
+
+.opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.opt { position: relative; display: block; cursor: pointer; }
+.opt input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.opt-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  height: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 10px 10px 12px;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.opt:hover .opt-body { border-color: #9fb3c0; }
+.opt input:focus-visible + .opt-body { outline: 3px solid var(--brand); outline-offset: 2px; }
+.opt input:checked + .opt-body { border-color: var(--sel); background: var(--sel-soft); box-shadow: inset 0 0 0 1px var(--sel); }
+.mark {
+  flex: none;
+  width: 20px; height: 20px;
+  margin-top: 1px;
+  border: 2px solid #9aa8b4;
+  background: #fff;
+  display: grid; place-items: center;
+}
+.single .mark { border-radius: 50%; }
+.multi .mark { border-radius: 5px; }
+.opt input:checked + .opt-body .mark { border-color: var(--sel); background: var(--sel); }
+.single .opt input:checked + .opt-body .mark::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.multi .opt input:checked + .opt-body .mark::after { content: ""; width: 5px; height: 10px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
+.opt-text { flex: 1; min-width: 0; }
+.opt-label { display: block; font-weight: 600; }
+.opt-sub { display: block; color: var(--muted); font-size: 13px; margin-top: 1px; }
+.opt-score {
+  flex: none;
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  background: #eef1f4;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.opt input:checked + .opt-body .opt-score { background: var(--sel); color: #fff; }
+
+.help {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #7f93a3;
+  color: #4f6577;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.opt-body .help { margin-top: 1px; }
+.help:hover, .help.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.help:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+#tip {
+  position: fixed;
+  z-index: 50;
+  max-width: 320px;
+  background: #1d2733;
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  display: none;
+  pointer-events: none;
+}
+#tip.pinned { pointer-events: auto; }
+#tip strong { display: block; margin-bottom: 2px; }
+
+.sev { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.sev.show { display: block; }
+.sev-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sev-row .lbl { font-size: 14px; font-weight: 600; margin-right: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: block; padding: 6px 14px; font-weight: 700; border-left: 1px solid var(--line); }
+.seg label:first-child span { border-left: 0; }
+.seg input:checked + span { background: var(--sel); color: #fff; }
+.seg input:focus-visible + span { outline: 3px solid var(--brand); outline-offset: -3px; }
+
+details.bmi { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+details.bmi summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.bmi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; align-items: end; }
+.bmi-out { padding: 10px 12px; border-radius: 8px; background: #eef1f4; font-weight: 600; min-height: 43px; display: flex; align-items: center; }
+.bmi-out.ok { background: var(--sel-soft); color: var(--brand); }
+.bmi-out.bad { background: #fbeceb; color: var(--warn); font-weight: 500; font-size: 13px; }
+
+#results { margin-top: 26px; }
+.res-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.res-total { font-size: 44px; font-weight: 800; line-height: 1; }
+.res-total small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.chip { display: inline-block; padding: 5px 12px; border-radius: 99px; font-weight: 700; color: #fff; background: #8795a1; white-space: nowrap; }
+.scale { display: flex; gap: 4px; margin: 16px 0 6px; }
+.scale div { flex: 1; border-radius: 6px; padding: 6px 6px; font-size: 12px; text-align: center; background: #eef1f4; color: var(--muted); border: 2px solid transparent; }
+.scale div b { display: block; font-size: 12.5px; }
+.scale div.on { color: #fff; }
+.flags { margin: 14px 0 0; padding: 0; list-style: none; }
+.flags li { background: #fbeceb; color: #7d1b15; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-weight: 600; font-size: 14px; }
+#results h3 { margin: 18px 0 6px; font-size: 15px; }
+.actions { margin: 0; padding-left: 20px; }
+.actions li { margin: 4px 0; }
+.small { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+.pending { color: var(--muted); }
+
+.bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.97);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.08);
+  z-index: 40;
+}
+.bar-inner { display: flex; align-items: center; gap: 12px; padding: 10px 16px; max-width: 980px; margin: 0 auto; }
+.bar-score { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; flex: 1; }
+.bar-tool { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.bar-total { font-size: 28px; font-weight: 800; line-height: 1; }
+.bar-prog { color: var(--muted); font-size: 13px; }
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary.dim { background: #8dbcbf; border-color: #8dbcbf; }
+.btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  background: #1d2733;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 60;
+  display: none;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+
+[hidden] { display: none !important; }
+
+@media (max-width: 640px) {
+  .details { grid-template-columns: 1fr; }
+  .picker { grid-template-columns: 1fr 1fr; }
+  .picker button { padding: 12px; }
+  .picker button strong { font-size: 16px; }
+  .opts { grid-template-columns: 1fr; }
+  .bmi-grid { grid-template-columns: 1fr 1fr; }
+  .bmi-out { grid-column: 1 / -1; }
+  .bar-inner { padding: 8px 12px; gap: 8px; }
+  .bar-total { font-size: 24px; }
+  .btn { padding: 10px 12px; }
+  .bar .btn.secondary { display: none; }
+  .scale div { font-size: 11px; padding: 5px 2px; }
+  .scale div b { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Pressure Risk Calculator</h1>
+    <p>Waterlow and Braden pressure injury risk assessment</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="panel details">
+    <div class="field" id="f-client">
+      <label for="client">Client name or initials</label>
+      <input id="client" type="text" autocomplete="off" placeholder="eg S.I.">
+    </div>
+    <div class="field" id="f-date">
+      <label for="date">Assessment date</label>
+      <input id="date" type="date">
+    </div>
+  </div>
+
+  <div class="picker" role="group" aria-label="Choose assessment">
+    <button type="button" data-tool="waterlow" aria-pressed="true"><strong>Waterlow</strong><span>Higher score means higher risk</span></button>
+    <button type="button" data-tool="braden" aria-pressed="false"><strong>Braden</strong><span>Lower score means higher risk</span></button>
+  </div>
+
+  <form id="form-waterlow" class="toolform" data-tool="waterlow" autocomplete="off" onsubmit="return false"></form>
+  <form id="form-braden" class="toolform" data-tool="braden" autocomplete="off" onsubmit="return false" hidden></form>
+
+  <section class="panel" id="results" aria-live="polite"></section>
+</main>
+
+<div class="bar">
+  <div class="bar-inner">
+    <div class="bar-score">
+      <span class="bar-tool" id="bar-tool">Waterlow</span>
+      <span class="bar-total" id="bar-total">0</span>
+      <span class="chip" id="bar-chip" hidden></span>
+      <span class="bar-prog" id="bar-prog"></span>
+    </div>
+    <button type="button" class="btn secondary" id="btn-clear">Clear</button>
+    <button type="button" class="btn primary" id="btn-pdf">Download PDF</button>
+  </div>
+</div>
+
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status"></div>
+
+<script>
+/*__JSPDF__*/
+</script>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- Risk bands and actions ---------- */
+
+var C = {
+  green: [31, 138, 76],
+  amber: [196, 140, 0],
+  orange: [217, 110, 30],
+  red: [192, 57, 43],
+  dark: [128, 22, 22]
+};
+
+var BANDS = {
+  waterlow: [
+    { min: -Infinity, max: 9, name: 'Not at risk', range: 'Under 10', colour: C.green, actions: [
+      'Continue routine skin checks during personal care',
+      'Encourage regular movement, position changes, and good nutrition and hydration',
+      'Reassess if health, mobility or continence changes'
+    ]},
+    { min: 10, max: 14, name: 'At risk', range: '10 to 14', colour: C.amber, actions: [
+      'Check skin over bony prominences daily, especially sacrum, hips and heels',
+      'Encourage position changes at least every 2 to 4 hours when in bed or a chair for long periods',
+      'Consider a high specification foam mattress or overlay and a pressure redistributing cushion',
+      'Keep skin clean and dry, and manage continence and moisture',
+      'Educate client and carers on pressure care and early warning signs',
+      'Reassess monthly or with any change in condition'
+    ]},
+    { min: 15, max: 19, name: 'High risk', range: '15 to 19', colour: C.red, actions: [
+      'Check skin at least twice daily over all bony prominences',
+      'Reposition at least every 2 to 3 hours using a 30 degree tilt, with small weight shifts in between',
+      'Provide a pressure redistributing mattress (high specification foam or alternating air overlay) and cushion',
+      'Offload heels and limit time sitting in one position',
+      'Reduce friction and shear with slide sheets and correct transfer technique',
+      'Liaise with the case manager, GP or community nursing and reassess weekly'
+    ]},
+    { min: 20, max: Infinity, name: 'Very high risk', range: '20 and over', colour: C.dark, actions: [
+      'Check skin at every contact and at least twice daily',
+      'Reposition every 1 to 2 hours, including overnight, using a repositioning chart',
+      'Provide an active alternating air mattress and a high specification pressure redistributing cushion',
+      'Fully offload heels and minimise sitting time',
+      'Urgent referral to GP, community nursing or wound care, and dietitian',
+      'Reassess at every visit and with any change'
+    ]}
+  ],
+  braden: [
+    { min: 19, max: Infinity, name: 'No risk', range: '19 to 23', colour: C.green, actions: [
+      'Continue routine skin checks during personal care',
+      'Encourage regular movement, position changes, and good nutrition and hydration',
+      'Reassess if health, mobility or continence changes'
+    ]},
+    { min: 15, max: 18, name: 'Mild risk', range: '15 to 18', colour: C.amber, actions: [
+      'Check skin over bony prominences daily, especially sacrum, hips and heels',
+      'Encourage position changes and a planned turning schedule if in bed or a chair for long periods',
+      'Consider a pressure redistributing cushion for prolonged sitting and heel offloading in bed',
+      'Manage moisture, continence and nutrition',
+      'Educate client and carers on pressure care and early warning signs',
+      'Reassess monthly or with any change in condition'
+    ]},
+    { min: 13, max: 14, name: 'Moderate risk', range: '13 to 14', colour: C.orange, actions: [
+      'Check skin daily over all bony prominences',
+      'Reposition every 2 to 3 hours using a 30 degree tilt',
+      'Provide a high specification foam mattress or overlay and a pressure redistributing cushion',
+      'Offload heels with pillows or heel protectors',
+      'Manage moisture, continence and nutrition',
+      'Reassess fortnightly or with any change in condition'
+    ]},
+    { min: 10, max: 12, name: 'High risk', range: '10 to 12', colour: C.red, actions: [
+      'Check skin at least twice daily over all bony prominences',
+      'Reposition every 2 hours using a 30 degree tilt, with small weight shifts in between',
+      'Provide a high specification pressure redistributing mattress (foam or alternating air) and cushion',
+      'Limit sitting time and fully offload heels',
+      'Reduce friction and shear with slide sheets and correct transfer technique',
+      'Liaise with the case manager, GP or community nursing and reassess weekly'
+    ]},
+    { min: -Infinity, max: 9, name: 'Very high risk', range: '9 or less', colour: C.dark, actions: [
+      'Check skin at every contact and at least twice daily',
+      'Reposition every 1 to 2 hours, including overnight, using a repositioning chart',
+      'Provide an active alternating air mattress and a high specification pressure redistributing cushion',
+      'Fully offload heels and minimise sitting time',
+      'Urgent referral to GP, community nursing or wound care, and dietitian',
+      'Reassess at every visit and with any change'
+    ]}
+  ]
+};
+
+/* ---------- Tool definitions ---------- */
+
+var TOOLS = {
+  braden: {
+    name: 'Braden',
+    pdfTitle: 'Braden Scale',
+    pdfSub: 'Pressure injury risk assessment',
+    intro: 'Choose one answer in each of the six sections. Each section scores 1 to 4 (friction and shear 1 to 3). Total ranges from 6 to 23 and a lower score means higher risk. Hover over or tap any ? for an explanation.',
+    reference: 'Braden Scale for Predicting Pressure Sore Risk, Bergstrom N and Braden B, 1988.',
+    items: [
+      { id: 'sensory', title: 'Sensory perception', type: 'single', required: true,
+        help: 'Ability to feel and respond meaningfully to discomfort caused by pressure.',
+        options: [
+          { id: '1', score: 1, label: 'Completely limited', sub: 'Unresponsive to pain, or cannot feel pain over most of the body',
+            help: 'Unresponsive (does not moan, flinch or grasp) to painful stimuli due to a reduced level of consciousness or sedation, OR limited ability to feel pain over most of the body.' },
+          { id: '2', score: 2, label: 'Very limited', sub: 'Responds only to pain, shows discomfort only by moaning or restlessness',
+            help: 'Responds only to painful stimuli. Cannot communicate discomfort except by moaning or restlessness, OR has a sensory impairment that limits the ability to feel pain or discomfort over half of the body.' },
+          { id: '3', score: 3, label: 'Slightly limited', sub: 'Responds to verbal commands but cannot always communicate discomfort',
+            help: 'Responds to verbal commands but cannot always communicate discomfort or the need to be turned, OR has some sensory impairment that limits the ability to feel pain or discomfort in one or two limbs.' },
+          { id: '4', score: 4, label: 'No impairment', sub: 'Responds to verbal commands, no sensory deficit',
+            help: 'Responds to verbal commands. Has no sensory deficit that would limit the ability to feel or voice pain or discomfort.' }
+        ]},
+      { id: 'moisture', title: 'Moisture', type: 'single', required: true,
+        help: 'How often the skin is exposed to moisture from sweat, urine, faeces or wound drainage.',
+        options: [
+          { id: '1', score: 1, label: 'Constantly moist', sub: 'Skin damp almost all the time from sweat or urine',
+            help: 'Skin is kept moist almost constantly by perspiration, urine and so on. Dampness is found every time the person is moved or turned.' },
+          { id: '2', score: 2, label: 'Very moist', sub: 'Skin often but not always moist',
+            help: 'Skin is often, but not always, moist. Linen must be changed at least once a shift.' },
+          { id: '3', score: 3, label: 'Occasionally moist', sub: 'Extra linen change about once a day',
+            help: 'Skin is occasionally moist, needing an extra linen change about once a day.' },
+          { id: '4', score: 4, label: 'Rarely moist', sub: 'Skin usually dry, routine linen changes only',
+            help: 'Skin is usually dry. Linen only needs changing at routine intervals.' }
+        ]},
+      { id: 'activity', title: 'Activity', type: 'single', required: true,
+        help: 'How physically active the person is across the day.',
+        options: [
+          { id: '1', score: 1, label: 'Bedfast', sub: 'Confined to bed',
+            help: 'Confined to bed.' },
+          { id: '2', score: 2, label: 'Chairfast', sub: 'Walking severely limited or nil, cannot bear own weight',
+            help: 'Ability to walk is severely limited or non existent. Cannot bear own weight or must be assisted into a chair or wheelchair.' },
+          { id: '3', score: 3, label: 'Walks occasionally', sub: 'Short distances only, most of the day in bed or chair',
+            help: 'Walks occasionally during the day, but for very short distances, with or without assistance. Spends most of each shift in bed or a chair.' },
+          { id: '4', score: 4, label: 'Walks frequently', sub: 'Walks outside the room at least twice a day',
+            help: 'Walks outside the room at least twice a day and inside the room at least once every two hours while awake.' }
+        ]},
+      { id: 'mobility', title: 'Mobility', type: 'single', required: true,
+        help: 'Ability to change and control body position independently.',
+        options: [
+          { id: '1', score: 1, label: 'Completely immobile', sub: 'No position changes without assistance',
+            help: 'Does not make even slight changes in body or limb position without assistance.' },
+          { id: '2', score: 2, label: 'Very limited', sub: 'Occasional slight changes only',
+            help: 'Makes occasional slight changes in body or limb position but is unable to make frequent or significant changes independently.' },
+          { id: '3', score: 3, label: 'Slightly limited', sub: 'Frequent slight changes independently',
+            help: 'Makes frequent though slight changes in body or limb position independently.' },
+          { id: '4', score: 4, label: 'No limitation', sub: 'Major and frequent changes without help',
+            help: 'Makes major and frequent changes in position without assistance.' }
+        ]},
+      { id: 'nutrition', title: 'Nutrition', type: 'single', required: true,
+        help: 'Usual food and fluid intake pattern. A protein serve includes meat, fish, eggs or dairy.',
+        options: [
+          { id: '1', score: 1, label: 'Very poor', sub: 'Rarely eats more than a third of meals, poor fluids',
+            help: 'Never eats a complete meal and rarely eats more than a third of any food offered. Eats 2 serves of protein or less per day. Takes fluids poorly and does not take a liquid supplement, OR is nil by mouth or on clear fluids or IV fluids for more than 5 days.' },
+          { id: '2', score: 2, label: 'Probably inadequate', sub: 'Usually eats about half of meals',
+            help: 'Rarely eats a complete meal and generally eats only about half of any food offered. Protein intake is only 3 serves per day. Occasionally takes a dietary supplement, OR receives less than the optimum amount of liquid diet or tube feeding.' },
+          { id: '3', score: 3, label: 'Adequate', sub: 'Eats over half of most meals',
+            help: 'Eats over half of most meals and a total of 4 serves of protein per day. Occasionally refuses a meal but usually takes a supplement when offered, OR is on tube feeding or parenteral nutrition that probably meets most nutritional needs.' },
+          { id: '4', score: 4, label: 'Excellent', sub: 'Eats most of every meal, never refuses',
+            help: 'Eats most of every meal and never refuses a meal. Usually eats 4 or more serves of protein. Occasionally eats between meals. Does not need supplements.' }
+        ]},
+      { id: 'friction', title: 'Friction and shear', type: 'single', required: true,
+        help: 'Friction is skin rubbing against a surface. Shear is when the skin stays still while the body underneath slides, such as sliding down in bed or in a chair.',
+        options: [
+          { id: '1', score: 1, label: 'Problem', sub: 'Needs moderate to maximal assist, often slides down',
+            help: 'Needs moderate to maximal assistance to move. Lifting completely without sliding against the sheets is impossible. Frequently slides down in bed or a chair and needs frequent repositioning with maximal assistance. Spasticity, contractures or agitation cause almost constant friction.' },
+          { id: '2', score: 2, label: 'Potential problem', sub: 'Moves feebly or needs minimal assist, occasionally slides',
+            help: 'Moves feebly or needs minimal assistance. During a move the skin probably slides to some extent against sheets, chair or other devices. Keeps a relatively good position in a chair or bed most of the time but occasionally slides down.' },
+          { id: '3', score: 3, label: 'No apparent problem', sub: 'Moves independently and lifts fully during moves',
+            help: 'Moves in bed and in a chair independently and has enough muscle strength to lift up completely during a move. Keeps a good position in bed or a chair at all times.' }
+        ]}
+    ]
+  },
+
+  waterlow: {
+    name: 'Waterlow',
+    pdfTitle: 'Waterlow Score',
+    pdfSub: 'Pressure injury risk assessment',
+    intro: 'Complete every section down to Mobility, then tick any special risks that apply. Where it says tick all that apply, each ticked item adds to the score. A higher score means higher risk. Hover over or tap any ? for an explanation.',
+    reference: 'Waterlow pressure ulcer prevention and treatment score card, 2005 revision. Malnutrition Screening Tool, Ferguson M et al, 1999.',
+    items: [
+      { id: 'build', title: 'Build and weight for height', type: 'single', required: true, bmi: true,
+        help: 'Based on body mass index (BMI), which is weight in kg divided by height in metres squared. If the BMI is unknown, use the calculator at the bottom of this section.',
+        options: [
+          { id: 'avg', score: 0, label: 'Average', sub: 'BMI 20 to 24.9' },
+          { id: 'above', score: 1, label: 'Above average', sub: 'BMI 25 to 29.9' },
+          { id: 'obese', score: 2, label: 'Obese', sub: 'BMI 30 and over' },
+          { id: 'below', score: 3, label: 'Below average', sub: 'BMI under 20' }
+        ]},
+      { id: 'skin', title: 'Skin type, visual risk areas', type: 'multi', required: true, note: 'Tick all that apply.',
+        help: 'Look at the skin over pressure areas such as the sacrum, buttocks, hips, heels and elbows. Tick every item that applies. Each ticked item adds to the score.',
+        options: [
+          { id: 'healthy', score: 0, label: 'Healthy', excl: ['*'],
+            help: 'Intact, well hydrated skin with normal colour and elasticity.' },
+          { id: 'tissue', score: 1, label: 'Tissue paper', excl: ['healthy'],
+            help: 'Thin, fragile skin that tears or bruises easily. Common with ageing or long term steroid use.' },
+          { id: 'dry', score: 1, label: 'Dry', excl: ['healthy'],
+            help: 'Dry, flaky or scaly skin that may crack.' },
+          { id: 'oedema', score: 1, label: 'Oedematous', excl: ['healthy'],
+            help: 'Swollen skin from fluid build up, often in the legs or feet. A dent may remain after pressing the skin.' },
+          { id: 'clammy', score: 1, label: 'Clammy, pyrexia', excl: ['healthy'],
+            help: 'Skin that is cool and damp (clammy), or hot and sweaty from a fever (pyrexia).' },
+          { id: 'disc', score: 2, label: 'Discoloured grade 1', excl: ['healthy'],
+            help: 'Intact skin with persistent redness that does not blanch (fade) when pressed. Equivalent to a stage 1 pressure injury.' },
+          { id: 'broken', score: 3, label: 'Broken or spots grade 2 to 4', excl: ['healthy'],
+            help: 'Open skin, blisters or wounds over pressure areas. Equivalent to a stage 2, 3 or 4 pressure injury.' }
+        ]},
+      { id: 'sex', title: 'Sex', type: 'single', required: true,
+        options: [
+          { id: 'm', score: 1, label: 'Male' },
+          { id: 'f', score: 2, label: 'Female' }
+        ]},
+      { id: 'age', title: 'Age', type: 'single', required: true,
+        options: [
+          { id: 'a1', score: 1, label: '14 to 49' },
+          { id: 'a2', score: 2, label: '50 to 64' },
+          { id: 'a3', score: 3, label: '65 to 74' },
+          { id: 'a4', score: 4, label: '75 to 80' },
+          { id: 'a5', score: 5, label: '81 and over' }
+        ]},
+      { heading: 'Malnutrition Screening Tool (MST)',
+        help: 'The Malnutrition Screening Tool is a quick Australian nutrition screen built into the Waterlow. Its score adds to the Waterlow total. An MST score over 2 means refer for nutrition assessment and intervention.' },
+      { id: 'mstA', title: 'A. Has the client lost weight recently without trying?', short: 'Recent weight loss', type: 'single', required: true,
+        help: 'Unplanned weight loss, for example clothes or rings now loose. If Yes, answer B. If No or Unsure, go to C.',
+        options: [
+          { id: 'no', score: 0, label: 'No', sub: 'Go to C' },
+          { id: 'yes', score: 0, label: 'Yes', sub: 'Answer B' },
+          { id: 'unsure', score: 2, label: 'Unsure', sub: 'Go to C' }
+        ]},
+      { id: 'mstB', title: 'B. How much weight has been lost?', short: 'Amount lost', type: 'single', required: true, showIf: { mstA: 'yes' },
+        help: 'Approximate amount of unplanned weight lost.',
+        options: [
+          { id: 'b1', score: 1, label: '0.5 to 5 kg' },
+          { id: 'b2', score: 2, label: '5 to 10 kg' },
+          { id: 'b3', score: 3, label: '10 to 15 kg' },
+          { id: 'b4', score: 4, label: 'More than 15 kg' },
+          { id: 'bu', score: 2, label: 'Unsure of amount' }
+        ]},
+      { id: 'mstC', title: 'C. Eating poorly or lack of appetite?', short: 'Eating poorly or lack of appetite', type: 'single', required: true,
+        help: 'Eating less than usual because of a poor or reduced appetite.',
+        options: [
+          { id: 'no', score: 0, label: 'No' },
+          { id: 'yes', score: 1, label: 'Yes' }
+        ]},
+      { heading: 'Continence and mobility' },
+      { id: 'continence', title: 'Continence', type: 'single', required: true,
+        options: [
+          { id: 'cont', score: 0, label: 'Complete or catheterised',
+            help: 'Fully continent, or urine is managed with a catheter.' },
+          { id: 'urine', score: 1, label: 'Urine incontinence' },
+          { id: 'faecal', score: 2, label: 'Faecal incontinence' },
+          { id: 'both', score: 3, label: 'Urinary and faecal incontinence' }
+        ]},
+      { id: 'mobility', title: 'Mobility', type: 'single', required: true,
+        options: [
+          { id: 'fully', score: 0, label: 'Fully', help: 'Moves freely and changes position independently.' },
+          { id: 'restless', score: 1, label: 'Restless or fidgety', help: 'Moves constantly, which can cause friction and shear on the skin.' },
+          { id: 'apathetic', score: 2, label: 'Apathetic', help: 'Little interest or motivation to move or change position, often due to low mood, fatigue, sedation or cognitive decline.' },
+          { id: 'restricted', score: 3, label: 'Restricted', help: 'Movement is limited by pain, stiffness, weakness or a condition such as arthritis.' },
+          { id: 'bedbound', score: 4, label: 'Bedbound', sub: 'eg traction', help: 'Spends most or all of the day in bed, for example due to traction or severe illness.' },
+          { id: 'chairbound', score: 5, label: 'Chairbound', sub: 'eg wheelchair', help: 'Spends most of the day sitting in a chair or wheelchair.' }
+        ]},
+      { heading: 'Special risks', note: 'Optional. Only tick items that apply and leave a section blank if none apply.' },
+      { id: 'tissue', title: 'Tissue malnutrition', type: 'multi', required: false, note: 'Tick all that apply.',
+        help: 'Conditions that reduce blood supply or nutrition to the tissues, making skin breakdown more likely.',
+        options: [
+          { id: 'cachexia', score: 8, label: 'Terminal cachexia',
+            help: 'Severe wasting of muscle and fat with marked weight loss, usually in advanced illness such as cancer or end stage organ disease.' },
+          { id: 'multi', score: 8, label: 'Multiple organ failure',
+            help: 'Failure of two or more major organ systems, such as the heart, lungs and kidneys.' },
+          { id: 'single', score: 5, label: 'Single organ failure', sub: 'Respiratory, renal or cardiac',
+            help: 'Failure of one major organ, for example severe COPD (respiratory), kidney failure or dialysis (renal), or heart failure (cardiac).' },
+          { id: 'pvd', score: 5, label: 'Peripheral vascular disease',
+            help: 'Poor circulation to the legs and feet from narrowed arteries. Signs include cold feet, weak pulses, shiny hairless skin and leg pain when walking.' },
+          { id: 'anaemia', score: 2, label: 'Anaemia', sub: 'Hb under 8',
+            help: 'Low haemoglobin, below 8 g/dL (80 g/L), which reduces oxygen delivery to the tissues.' },
+          { id: 'smoking', score: 1, label: 'Smoking',
+            help: 'Current smoker. Smoking reduces blood flow and oxygen to the skin.' }
+        ]},
+      { id: 'neuro', title: 'Neurological deficit', type: 'multi', required: false, severity: [4, 5, 6], sevDefault: 4,
+        note: 'Tick the condition, then choose a score of 4 to 6 based on severity. Maximum 6 for this section.',
+        help: 'Conditions that affect sensation or movement, so the person may not feel or respond to pressure.',
+        sevHelp: 'Score 4 for mild, 5 for moderate and 6 for severe impact on sensation or movement. Use clinical judgement.',
+        options: [
+          { id: 'diabetes', score: 0, label: 'Diabetes', help: 'Diabetes can reduce sensation (neuropathy) and circulation, especially in the feet.' },
+          { id: 'ms', score: 0, label: 'MS', help: 'Multiple sclerosis.' },
+          { id: 'cva', score: 0, label: 'CVA', help: 'Cerebrovascular accident, also known as a stroke.' },
+          { id: 'motor', score: 0, label: 'Motor or sensory', help: 'Any other loss of movement or sensation, for example Parkinson’s disease, peripheral neuropathy or spinal cord injury.' },
+          { id: 'para', score: 0, label: 'Paraplegia', help: 'Paralysis of the legs and lower body.' }
+        ]},
+      { id: 'surgery', title: 'Major surgery or trauma', type: 'multi', required: false,
+        note: 'Theatre time scores can be discounted after 48 hours if recovery is normal.',
+        help: 'Recent major surgery or injury. Long periods on the operating table greatly raise pressure injury risk.',
+        options: [
+          { id: 'ortho', score: 5, label: 'Orthopaedic or spinal',
+            help: 'Orthopaedic surgery such as a hip fracture repair or joint replacement, or spinal surgery or injury.' },
+          { id: 't2', score: 5, label: 'On table over 2 hours', excl: ['t6'],
+            help: 'Time on the operating table more than 2 hours. Pick either this or over 6 hours, not both.' },
+          { id: 't6', score: 8, label: 'On table over 6 hours', excl: ['t2'],
+            help: 'Time on the operating table more than 6 hours.' }
+        ]},
+      { id: 'meds', title: 'Medication', type: 'multi', required: false, severity: [1, 2, 3, 4], sevDefault: 4,
+        note: 'Tick the medication, then choose a score up to 4. Maximum 4 for this section.',
+        help: 'Medicines that slow healing or thin the skin.',
+        sevHelp: 'The Waterlow card allows up to 4 for this section. Most services score 4 when any of these medicines are taken.',
+        options: [
+          { id: 'cyto', score: 0, label: 'Cytotoxics', help: 'Chemotherapy medicines that kill or slow the growth of cells.' },
+          { id: 'steroids', score: 0, label: 'Long term or high dose steroids', help: 'Corticosteroids such as prednisolone taken long term or at high doses.' },
+          { id: 'antiinf', score: 0, label: 'Anti inflammatory', help: 'Anti inflammatory medicines such as ibuprofen, naproxen, diclofenac or celecoxib.' }
+        ]}
+    ]
+  }
+};
+
+/* ---------- Helpers ---------- */
+
+function $(s, r) { return (r || document).querySelector(s); }
+function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function helpBtn(text, title) {
+  if (!text) return '';
+  return '<span class="help" role="button" tabindex="0" aria-label="More information' + (title ? ' about ' + esc(title) : '') +
+    '" data-title="' + esc(title || '') + '" data-help="' + esc(text) + '">?</span>';
+}
+function sections(tool) { return TOOLS[tool].items.filter(function (i) { return i.id; }); }
+function sectionDef(tool, id) { return sections(tool).filter(function (s) { return s.id === id; })[0]; }
+function nameOf(tool, sid) { return tool + '_' + sid; }
+function selected(tool, sid) {
+  return $$('input[name="' + nameOf(tool, sid) + '"]:checked').map(function (i) { return i.value; });
+}
+function optDef(sec, oid) { return sec.options.filter(function (o) { return o.id === oid; })[0]; }
+function sevValue(tool, sid) {
+  var el = $('input[name="' + nameOf(tool, sid) + '_sev"]:checked');
+  return el ? Number(el.value) : 0;
+}
+function bandFor(tool, total) {
+  return BANDS[tool].filter(function (b) { return total >= b.min && total <= b.max; })[0];
+}
+function rgb(c) { return 'rgb(' + c.join(',') + ')'; }
+function isVisible(tool, sec) {
+  if (!sec.showIf) return true;
+  return Object.keys(sec.showIf).every(function (k) { return selected(tool, k)[0] === sec.showIf[k]; });
+}
+
+/* ---------- Render ---------- */
+
+function renderTool(tool) {
+  var t = TOOLS[tool];
+  var html = '<p class="intro">' + esc(t.intro) + '</p>';
+  t.items.forEach(function (it) {
+    if (it.heading) {
+      html += '<div class="group-h"><h2>' + esc(it.heading) + '</h2>' + helpBtn(it.help, it.heading) + '</div>';
+      if (it.note) html += '<p class="group-note">' + esc(it.note) + '</p>';
+      return;
+    }
+    var type = it.type === 'multi' ? 'checkbox' : 'radio';
+    html += '<section class="card" id="sec-' + tool + '-' + it.id + '" data-sec="' + it.id + '">';
+    html += '<div class="card-h"><h3>' + esc(it.title) + '</h3>' + helpBtn(it.help, it.title) +
+      (it.required ? '' : '<span class="tag">Optional</span>') +
+      '<span class="sec-score" data-score></span></div>';
+    if (it.note) html += '<p class="note">' + esc(it.note) + '</p>';
+    html += '<div class="opts ' + (it.type === 'multi' ? 'multi' : 'single') + '">';
+    it.options.forEach(function (o) {
+      var showScore = !it.severity;
+      html += '<label class="opt"><input type="' + type + '" name="' + nameOf(tool, it.id) + '" value="' + o.id + '">' +
+        '<span class="opt-body"><span class="mark"></span><span class="opt-text"><span class="opt-label">' + esc(o.label) + '</span>' +
+        (o.sub ? '<span class="opt-sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
+        helpBtn(o.help, o.label) +
+        (showScore ? '<span class="opt-score">' + o.score + '</span>' : '') +
+        '</span></label>';
+    });
+    html += '</div>';
+    if (it.severity) {
+      html += '<div class="sev" data-sev><div class="sev-row"><span class="lbl">Score for this section' + helpBtn(it.sevHelp, 'Severity score') + '</span><span class="seg">';
+      it.severity.forEach(function (v) {
+        html += '<label><input type="radio" name="' + nameOf(tool, it.id) + '_sev" value="' + v + '"' + (v === it.sevDefault ? ' checked' : '') + '><span>' + v + '</span></label>';
+      });
+      html += '</span></div></div>';
+    }
+    if (it.bmi) {
+      html += '<details class="bmi" id="bmi-box"><summary>Don’t know the BMI? Calculate it</summary>' +
+        '<div class="bmi-grid">' +
+        '<div class="field"><label for="bmi-h">Height (cm)</label><input id="bmi-h" type="number" inputmode="decimal" min="0" step="0.5" placeholder="eg 165"></div>' +
+        '<div class="field"><label for="bmi-w">Weight (kg)</label><input id="bmi-w" type="number" inputmode="decimal" min="0" step="0.1" placeholder="eg 70"></div>' +
+        '<div class="bmi-out" id="bmi-out">Enter height and weight</div>' +
+        '</div></details>';
+    }
+    html += '</section>';
+  });
+  $('#form-' + tool).innerHTML = html;
+}
+
+/* ---------- BMI ---------- */
+
+var bmiState = { value: null, h: null, w: null };
+
+function calcBmi() {
+  var h = parseFloat($('#bmi-h').value);
+  var w = parseFloat($('#bmi-w').value);
+  var out = $('#bmi-out');
+  out.className = 'bmi-out';
+  bmiState = { value: null, h: null, w: null };
+  if (!h || !w) { out.textContent = 'Enter height and weight'; return; }
+  if (h < 100 || h > 250) { out.className = 'bmi-out bad'; out.textContent = 'Check height. Enter it in centimetres, eg 165'; return; }
+  if (w < 25 || w > 350) { out.className = 'bmi-out bad'; out.textContent = 'Check weight. Enter it in kilograms, eg 70'; return; }
+  var bmi = Math.round((w / Math.pow(h / 100, 2)) * 10) / 10;
+  var band = bmi < 20 ? 'below' : bmi < 25 ? 'avg' : bmi < 30 ? 'above' : 'obese';
+  var opt = optDef(sectionDef('waterlow', 'build'), band);
+  bmiState = { value: bmi, h: h, w: w };
+  out.className = 'bmi-out ok';
+  out.textContent = 'BMI ' + bmi.toFixed(1) + ', ' + opt.label + ' (score ' + opt.score + ')';
+  var input = $('input[name="waterlow_build"][value="' + band + '"]');
+  if (input) input.checked = true;
+}
+
+/* ---------- Compute ---------- */
+
+function listLabels(sec, ids) {
+  return ids.map(function (id) { return optDef(sec, id).label; }).join(', ');
+}
+
+function compute(tool) {
+  var rows = [];
+  var missing = [];
+  var total = 0;
+  var flags = [];
+  var t = TOOLS[tool];
+
+  if (tool === 'braden') {
+    sections(tool).forEach(function (s) {
+      var v = selected(tool, s.id)[0];
+      if (!v) { missing.push(s.id); rows.push({ id: s.id, item: s.title, answer: null, score: null }); return; }
+      var o = optDef(s, v);
+      total += o.score;
+      rows.push({ id: s.id, item: s.title, answer: o.label, detail: o.help, score: o.score });
+    });
+    var nut = selected(tool, 'nutrition')[0];
+    if (nut && Number(nut) <= 2) flags.push('Nutrition scored 2 or less: consider dietitian referral');
+    var moist = selected(tool, 'moisture')[0];
+    if (moist && Number(moist) <= 2) flags.push('Frequent moisture: review continence management and skin protection');
+    var fr = selected(tool, 'friction')[0];
+    if (fr === '1') flags.push('Friction and shear problem: use slide sheets and review transfer technique');
+  } else {
+    var secScore = {};
+    sections(tool).forEach(function (s) {
+      if (!isVisible(tool, s)) { secScore[s.id] = 0; return; }
+      var v = selected(tool, s.id);
+      var sc = 0;
+      if (s.severity) sc = v.length ? sevValue(tool, s.id) : 0;
+      else v.forEach(function (id) { sc += optDef(s, id).score; });
+      secScore[s.id] = sc;
+      if (s.required && !v.length) missing.push(s.id);
+    });
+
+    var single = function (sid, item, withSub) {
+      var s = sectionDef(tool, sid);
+      var v = selected(tool, sid)[0];
+      if (!v) return { id: sid, item: item, answer: null, score: null };
+      var o = optDef(s, v);
+      return { id: sid, item: item, answer: o.label + (withSub && o.sub ? ' (' + o.sub + ')' : ''), score: o.score };
+    };
+
+    var build = single('build', 'Build and weight for height', true);
+    if (build.answer && bmiState.value) {
+      build.detail = 'BMI ' + bmiState.value.toFixed(1) + ' calculated from height ' + bmiState.h + ' cm and weight ' + bmiState.w + ' kg';
+    }
+    rows.push(build);
+
+    var skinIds = selected(tool, 'skin');
+    rows.push({ id: 'skin', item: 'Skin type, visual risk areas', answer: skinIds.length ? listLabels(sectionDef(tool, 'skin'), skinIds) : null, score: skinIds.length ? secScore.skin : null });
+    rows.push(single('sex', 'Sex'));
+    rows.push(single('age', 'Age'));
+
+    var a = selected(tool, 'mstA')[0];
+    var b = selected(tool, 'mstB')[0];
+    var c = selected(tool, 'mstC')[0];
+    var mstScore = (secScore.mstA || 0) + (secScore.mstB || 0) + (secScore.mstC || 0);
+    var mstDone = a && c && (a !== 'yes' || b);
+    var parts = [];
+    if (a) {
+      var aTxt = 'Recent weight loss: ' + optDef(sectionDef(tool, 'mstA'), a).label;
+      if (a === 'yes' && b) aTxt += ', ' + optDef(sectionDef(tool, 'mstB'), b).label;
+      parts.push(aTxt);
+    }
+    if (c) parts.push('Eating poorly or lack of appetite: ' + optDef(sectionDef(tool, 'mstC'), c).label);
+    rows.push({ id: 'mstA', item: 'Malnutrition Screening Tool', answer: mstDone ? parts.join('. ') : null, score: mstDone ? mstScore : null });
+
+    rows.push(single('continence', 'Continence'));
+    rows.push(single('mobility', 'Mobility'));
+
+    ['tissue', 'neuro', 'surgery', 'meds'].forEach(function (sid) {
+      var s = sectionDef(tool, sid);
+      var v = selected(tool, sid);
+      var row = { id: sid, item: s.title, answer: v.length ? listLabels(s, v) : 'None', score: secScore[sid] };
+      if (s.severity && v.length) row.detail = 'Severity score ' + secScore[sid] + ' chosen';
+      rows.push(row);
+    });
+
+    Object.keys(secScore).forEach(function (k) { total += secScore[k]; });
+
+    if (mstDone && mstScore > 2) flags.push('MST score is ' + mstScore + ' (over 2): refer for nutrition assessment and intervention');
+    if (skinIds.indexOf('disc') > -1 || skinIds.indexOf('broken') > -1) {
+      flags.push('Skin damage noted: document site, size and stage, and refer for wound assessment');
+    }
+  }
+
+  var complete = missing.length === 0;
+  return {
+    tool: tool,
+    rows: rows,
+    total: total,
+    missing: missing,
+    complete: complete,
+    band: complete ? bandFor(tool, total) : null,
+    flags: flags,
+    def: t
+  };
+}
+
+/* ---------- UI update ---------- */
+
+var current = 'waterlow';
+
+function updateSections(tool) {
+  sections(tool).forEach(function (s) {
+    var el = $('#sec-' + tool + '-' + s.id);
+    var vis = isVisible(tool, s);
+    if (!vis) {
+      $$('input[name="' + nameOf(tool, s.id) + '"]').forEach(function (i) { i.checked = false; });
+    }
+    el.hidden = !vis;
+    var v = selected(tool, s.id);
+    var sc = 0;
+    if (s.severity) sc = v.length ? sevValue(tool, s.id) : 0;
+    else v.forEach(function (id) { sc += optDef(s, id).score; });
+    var scoreEl = $('[data-score]', el);
+    if (v.length || !s.required) scoreEl.textContent = 'Score ' + sc;
+    else scoreEl.textContent = '';
+    el.classList.toggle('done', v.length > 0);
+    if (v.length) el.classList.remove('flash');
+    var sev = $('[data-sev]', el);
+    if (sev) sev.classList.toggle('show', v.length > 0);
+  });
+}
+
+function renderResults(r) {
+  var t = r.def;
+  var bands = BANDS[r.tool];
+  var ordered = r.tool === 'braden' ? bands.slice().reverse() : bands;
+  var html = '<div class="res-top"><div class="res-total"><small>' + esc(t.name) + ' total</small>' + r.total + '</div>';
+  if (r.complete) {
+    html += '<span class="chip" style="background:' + rgb(r.band.colour) + '">' + esc(r.band.name) + '</span>';
+  } else {
+    html += '<span class="pending">' + r.missing.length + ' section' + (r.missing.length === 1 ? '' : 's') + ' still to complete. Total so far shown.</span>';
+  }
+  html += '</div><div class="scale">';
+  ordered.forEach(function (b) {
+    var on = r.complete && b === r.band;
+    html += '<div class="' + (on ? 'on' : '') + '"' + (on ? ' style="background:' + rgb(b.colour) + '"' : '') + '><b>' + esc(b.name) + '</b>' + esc(b.range) + '</div>';
+  });
+  html += '</div>';
+  if (r.complete) {
+    if (r.flags.length) {
+      html += '<ul class="flags">' + r.flags.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+    }
+    html += '<h3>Recommended actions</h3><ul class="actions">' +
+      r.band.actions.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>';
+  }
+  html += '<p class="small">This score supports clinical judgement and does not replace it. Equipment is listed by general type only and should be confirmed at trial.</p>';
+  $('#results').innerHTML = html;
+}
+
+function update() {
+  updateSections(current);
+  var r = compute(current);
+  renderResults(r);
+  $('#bar-tool').textContent = TOOLS[current].name;
+  $('#bar-total').textContent = r.total;
+  var chip = $('#bar-chip');
+  if (r.complete) {
+    chip.hidden = false;
+    chip.textContent = r.band.name;
+    chip.style.background = rgb(r.band.colour);
+    $('#bar-prog').textContent = '';
+  } else {
+    chip.hidden = true;
+    $('#bar-prog').textContent = r.missing.length + ' to go';
+  }
+  $('#btn-pdf').classList.toggle('dim', !r.complete);
+  return r;
+}
+
+/* ---------- Tooltip ---------- */
+
+var tip = $('#tip');
+var tipFor = null;
+var tipPinned = false;
+
+function showTip(el, pin) {
+  if (tipFor && tipFor !== el) tipFor.classList.remove('active');
+  tipFor = el;
+  tipPinned = !!pin;
+  el.classList.add('active');
+  var title = el.getAttribute('data-title');
+  tip.innerHTML = (title ? '<strong>' + esc(title) + '</strong>' : '') + esc(el.getAttribute('data-help'));
+  tip.classList.toggle('pinned', tipPinned);
+  tip.style.display = 'block';
+  tip.style.left = '0px';
+  tip.style.top = '0px';
+  var r = el.getBoundingClientRect();
+  var tw = tip.offsetWidth;
+  var th = tip.offsetHeight;
+  var barH = $('.bar').offsetHeight;
+  var left = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), window.innerWidth - tw - 8);
+  var top = r.bottom + 8;
+  if (top + th > window.innerHeight - barH - 8) top = Math.max(8, r.top - th - 8);
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+}
+function hideTip() {
+  if (tipFor) tipFor.classList.remove('active');
+  tipFor = null;
+  tipPinned = false;
+  tip.style.display = 'none';
+}
+
+document.addEventListener('pointerover', function (e) {
+  var h = e.target.closest && e.target.closest('.help');
+  if (h && e.pointerType === 'mouse' && !tipPinned) showTip(h, false);
+});
+document.addEventListener('pointerout', function (e) {
+  var h = e.target.closest && e.target.closest('.help');
+  if (h && e.pointerType === 'mouse' && !tipPinned && tipFor === h) hideTip();
+});
+document.addEventListener('click', function (e) {
+  var h = e.target.closest && e.target.closest('.help');
+  if (h) {
+    e.preventDefault();
+    if (tipFor === h && tipPinned) hideTip(); else showTip(h, true);
+    return;
+  }
+  if (!e.target.closest('#tip')) hideTip();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { hideTip(); return; }
+  var h = e.target.closest && e.target.closest('.help');
+  if (h && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    if (tipFor === h && tipPinned) hideTip(); else showTip(h, true);
+  }
+});
+window.addEventListener('scroll', function () { if (tipFor) hideTip(); }, { passive: true });
+window.addEventListener('resize', hideTip);
+
+/* ---------- Toast ---------- */
+
+var toastTimer;
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.style.display = 'none'; }, 3500);
+}
+
+/* ---------- Dates ---------- */
+
+function todayIso() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dateParts() {
+  var v = $('#date').value || todayIso();
+  var p = v.split('-');
+  return { d: p[2], m: p[1], y: p[0] };
+}
+
+/* ---------- PDF ---------- */
+
+function buildPdf(r) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  var M = 15, PW = 210, PH = 297, W = PW - 2 * M;
+  var y = 0;
+  var ink = [29, 39, 51], muted = [91, 104, 117], brand = [15, 110, 116], line = [217, 224, 230];
+  var dp = dateParts();
+  var client = $('#client').value.trim();
+
+  function color(c) { doc.setTextColor(c[0], c[1], c[2]); }
+  function newPage() { doc.addPage(); y = 18; }
+  function need(h) { if (y + h > PH - 18) newPage(); }
+
+  // Header band
+  doc.setFillColor(brand[0], brand[1], brand[2]);
+  doc.rect(0, 0, PW, 22, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(255, 255, 255);
+  doc.text(r.def.pdfTitle, M, 11.5);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.text(r.def.pdfSub, M, 17.5);
+  y = 28;
+
+  // Client and date
+  doc.setFillColor(243, 245, 247);
+  doc.setDrawColor(line[0], line[1], line[2]);
+  doc.roundedRect(M, y, W, 14, 2, 2, 'FD');
+  doc.setFontSize(8.5); color(muted); doc.setFont('helvetica', 'bold');
+  doc.text('CLIENT', M + 4, y + 5);
+  doc.text('ASSESSMENT DATE', M + W * 0.62, y + 5);
+  doc.setFontSize(11.5); color(ink); doc.setFont('helvetica', 'normal');
+  doc.text(doc.splitTextToSize(client, W * 0.55)[0] || '', M + 4, y + 11);
+  doc.text(dp.d + '/' + dp.m + '/' + dp.y, M + W * 0.62, y + 11);
+  y += 19;
+
+  // Table
+  var cItem = M + 3, cAns = M + 52, wItem = 46, wAns = W - 52 - 20, cScore = M + W - 4;
+  function tableHead() {
+    doc.setFillColor(brand[0], brand[1], brand[2]);
+    doc.rect(M, y, W, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255, 255, 255);
+    doc.text('Item', cItem, y + 5.4);
+    doc.text('Assessment', cAns, y + 5.4);
+    doc.text('Score', cScore, y + 5.4, { align: 'right' });
+    y += 8;
+  }
+  tableHead();
+  r.rows.forEach(function (row, i) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var itemLines = doc.splitTextToSize(row.item, wItem);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+    var ansLines = doc.splitTextToSize(row.answer || '', wAns);
+    doc.setFontSize(8);
+    var detLines = row.detail ? doc.splitTextToSize(row.detail, wAns) : [];
+    var lh = 4.2, dlh = 3.5;
+    var h = Math.max(itemLines.length * lh, ansLines.length * lh + detLines.length * dlh + (detLines.length ? 0.8 : 0)) + 3.6;
+    if (y + h > PH - 18) { newPage(); tableHead(); }
+    if (i % 2 === 1) { doc.setFillColor(247, 249, 250); doc.rect(M, y, W, h, 'F'); }
+    doc.setDrawColor(line[0], line[1], line[2]); doc.setLineWidth(0.2);
+    doc.line(M, y + h, M + W, y + h);
+    var ty = y + 4.8;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); color(ink);
+    doc.text(itemLines, cItem, ty, { lineHeightFactor: 1.25 });
+    doc.setFont('helvetica', 'normal');
+    doc.text(ansLines, cAns, ty, { lineHeightFactor: 1.25 });
+    if (detLines.length) {
+      doc.setFontSize(8); color(muted);
+      doc.text(detLines, cAns, ty + ansLines.length * lh + 0.4, { lineHeightFactor: 1.25 });
+    }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); color(ink);
+    doc.text(String(row.score), cScore, ty, { align: 'right' });
+    y += h;
+  });
+
+  // Total box
+  y += 5;
+  need(22);
+  var bc = r.band.colour;
+  doc.setFillColor(bc[0], bc[1], bc[2]);
+  doc.roundedRect(M, y, W, 16, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+  doc.text('TOTAL SCORE', M + 5, y + 5.8);
+  doc.setFontSize(19);
+  doc.text(String(r.total), M + 5, y + 13);
+  doc.setFontSize(8.5);
+  doc.text('RISK LEVEL', M + 45, y + 5.8);
+  doc.setFontSize(15);
+  doc.text(r.band.name, M + 45, y + 12.6);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  var rangeTxt = r.def.name + ' ' + r.band.range;
+  doc.text(rangeTxt, M + W - 5, y + 12.6, { align: 'right' });
+  y += 21.5;
+
+  // Band key
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); color(muted);
+  var bands = BANDS[r.tool];
+  var ordered = r.tool === 'braden' ? bands.slice().reverse() : bands;
+  var key = 'Risk bands: ' + ordered.map(function (b) { return b.name + ' ' + b.range; }).join('   |   ');
+  var keyLines = doc.splitTextToSize(key, W);
+  need(keyLines.length * 4 + 2);
+  doc.text(keyLines, M, y);
+  y += keyLines.length * 4 + 2.5;
+
+  // Flags
+  if (r.flags.length) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+    r.flags.forEach(function (f) {
+      var fl = doc.splitTextToSize(f, W - 8);
+      var fh = fl.length * 4.6 + 3;
+      need(fh + 2);
+      doc.setFillColor(251, 236, 235);
+      doc.roundedRect(M, y, W, fh, 1.5, 1.5, 'F');
+      doc.setTextColor(125, 27, 21);
+      doc.text(fl, M + 4, y + 5.1, { lineHeightFactor: 1.3 });
+      y += fh + 1.5;
+    });
+    y += 2.5;
+  }
+
+  // Actions
+  need(14);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); color(ink);
+  doc.text('Recommended actions', M, y + 2);
+  y += 7.5;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  r.band.actions.forEach(function (a) {
+    var al = doc.splitTextToSize(a, W - 7);
+    need(al.length * 4.6 + 1.5);
+    doc.setFillColor(brand[0], brand[1], brand[2]);
+    doc.circle(M + 1.6, y - 1.2, 0.9, 'F');
+    color(ink);
+    doc.text(al, M + 5, y, { lineHeightFactor: 1.3 });
+    y += al.length * 4.6 + 1.2;
+  });
+
+  y += 2.5;
+  doc.setFontSize(8.5); color(muted);
+  var disc = doc.splitTextToSize('This score supports clinical judgement and does not replace it. Equipment is listed by general type only and should be confirmed at trial.', W);
+  need(disc.length * 4);
+  doc.text(disc, M, y);
+
+  // Footer on every page
+  var pages = doc.getNumberOfPages();
+  var now = new Date();
+  var stamp = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' ' +
+    String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(line[0], line[1], line[2]);
+    doc.line(M, PH - 14, PW - M, PH - 14);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); color(muted);
+    doc.text(doc.splitTextToSize(r.def.reference, W - 58), M, PH - 10, { lineHeightFactor: 1.3 });
+    doc.text('Created ' + stamp + '   Page ' + p + ' of ' + pages, PW - M, PH - 10, { align: 'right' });
+  }
+  return doc;
+}
+
+function fileName(r) {
+  var dp = dateParts();
+  var client = $('#client').value.replace(/[\\\/:*?"<>|.,;]+/g, '').replace(/\s+/g, ' ').trim();
+  return r.def.name + ' ' + dp.d + '.' + dp.m + '.' + dp.y + (client ? ' ' + client : '') + '.pdf';
+}
+
+function downloadPdf() {
+  var r = update();
+  var clientEl = $('#f-client');
+  if (!$('#client').value.trim()) {
+    clientEl.classList.add('missing');
+    $('#client').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast('Add the client name or initials first');
+    return;
+  }
+  if (!r.complete) {
+    var first = $('#sec-' + current + '-' + r.missing[0]);
+    r.missing.forEach(function (id) { $('#sec-' + current + '-' + id).classList.add('flash'); });
+    first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(r.missing.length === 1 ? 'One section still needs an answer' : r.missing.length + ' sections still need an answer');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) { toast('PDF tool did not load. Try reopening the file.'); return; }
+  try {
+    var doc = buildPdf(r);
+    doc.save(fileName(r));
+    toast('PDF saved as ' + fileName(r));
+  } catch (err) {
+    console.error(err);
+    toast('Sorry, the PDF could not be created.');
+  }
+}
+
+/* ---------- Events ---------- */
+
+function onChange(e) {
+  var input = e.target;
+  var form = input.closest('form');
+  if (!form) return;
+  var tool = form.getAttribute('data-tool');
+  if (input.type === 'checkbox' && input.checked) {
+    var sid = input.name.replace(tool + '_', '');
+    var sec = sectionDef(tool, sid);
+    var o = sec && optDef(sec, input.value);
+    if (o && o.excl) {
+      $$('input[name="' + input.name + '"]').forEach(function (other) {
+        if (other === input) return;
+        var od = optDef(sec, other.value);
+        if (o.excl.indexOf('*') > -1 || o.excl.indexOf(other.value) > -1 || (od.excl && od.excl.indexOf('*') > -1)) {
+          other.checked = false;
+        }
+      });
+    }
+  }
+  update();
+}
+
+function init() {
+  renderTool('waterlow');
+  renderTool('braden');
+  $('#date').value = todayIso();
+
+  $$('.toolform').forEach(function (f) {
+    f.addEventListener('change', onChange);
+  });
+  $('#bmi-h').addEventListener('input', function () { calcBmi(); update(); });
+  $('#bmi-w').addEventListener('input', function () { calcBmi(); update(); });
+  $('#client').addEventListener('input', function () { $('#f-client').classList.remove('missing'); });
+
+  $$('.picker button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      current = b.getAttribute('data-tool');
+      $$('.picker button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      $('#form-waterlow').hidden = current !== 'waterlow';
+      $('#form-braden').hidden = current !== 'braden';
+      hideTip();
+      update();
+    });
+  });
+
+  $('#btn-pdf').addEventListener('click', downloadPdf);
+  $('#btn-clear').addEventListener('click', function () {
+    if (!window.confirm('Clear all ' + TOOLS[current].name + ' answers?')) return;
+    var form = $('#form-' + current);
+    $$('input[type="radio"], input[type="checkbox"]', form).forEach(function (i) { i.checked = i.defaultChecked; });
+    if (current === 'waterlow') {
+      $('#bmi-h').value = '';
+      $('#bmi-w').value = '';
+      calcBmi();
+      $('#bmi-box').open = false;
+    }
+    $$('.card.flash', form).forEach(function (c) { c.classList.remove('flash'); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    update();
+  });
+
+  update();
+}
+
+init();
+})();
+</script>
+</body>
+</html>
