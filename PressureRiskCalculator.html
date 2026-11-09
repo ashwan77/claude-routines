@@ -1007,14 +1007,13 @@ var TOOLS = {
           { id: 't6', score: 8, label: 'On table over 6 hours', excl: ['t2'],
             help: 'Time on the operating table more than 6 hours.' }
         ]},
-      { id: 'meds', title: 'Medication', type: 'multi', required: false, severity: [1, 2, 3, 4], sevDefault: 4,
-        note: 'Tick the medication, then choose a score up to 4. Maximum 4 for this section.',
-        help: 'Medicines that slow healing or thin the skin.',
-        sevHelp: 'The Waterlow card allows up to 4 for this section. Most services score 4 when any of these medicines are taken.',
+      { id: 'meds', title: 'Medication', type: 'multi', required: false, max: 4,
+        note: 'Tick any that apply. Each scores 4, and taking more than one still scores 4 (maximum 4 for this section).',
+        help: 'Medicines that slow healing or thin the skin. The score is set by the type of medicine, not the number of medicines or the dose.',
         options: [
-          { id: 'cyto', score: 0, label: 'Cytotoxics', help: 'Chemotherapy medicines that kill or slow the growth of cells.' },
-          { id: 'steroids', score: 0, label: 'Long term or high dose steroids', help: 'Corticosteroids such as prednisolone taken long term or at high doses.' },
-          { id: 'antiinf', score: 0, label: 'Anti inflammatory', help: 'Anti inflammatory medicines such as ibuprofen, naproxen, diclofenac or celecoxib.' }
+          { id: 'cyto', score: 4, label: 'Cytotoxics', help: 'Chemotherapy medicines that kill or slow the growth of cells.' },
+          { id: 'steroids', score: 4, label: 'Long term or high dose steroids', help: 'Corticosteroids such as prednisolone taken long term or at high doses.' },
+          { id: 'antiinf', score: 4, label: 'Anti inflammatory', help: 'Anti inflammatory medicines such as ibuprofen, naproxen, diclofenac or celecoxib.' }
         ]}
     ]
   }
@@ -1206,6 +1205,7 @@ function compute(tool) {
       var sc = 0;
       if (s.severity) sc = v.length ? sevValue(tool, s.id) : 0;
       else v.forEach(function (id) { sc += optDef(s, id).score; });
+      if (s.max) sc = Math.min(sc, s.max);
       secScore[s.id] = sc;
       if (s.required && !v.length) missing.push(s.id);
     });
@@ -1301,6 +1301,7 @@ function updateSections(tool) {
     var sc = 0;
     if (s.severity) sc = v.length ? sevValue(tool, s.id) : 0;
     else v.forEach(function (id) { sc += optDef(s, id).score; });
+    if (s.max) sc = Math.min(sc, s.max);
     var scoreEl = $('[data-score]', el);
     if (v.length || !s.required) scoreEl.textContent = 'Score ' + sc;
     else scoreEl.textContent = '';
