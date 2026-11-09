@@ -96,6 +96,7 @@ header.top p { margin: 2px 0 0; opacity: 0.85; font-size: 14px; }
 .card-h .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: #eef1f4; border-radius: 99px; padding: 2px 8px; }
 .card-h .sec-score { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--brand); white-space: nowrap; }
 .card .note { margin: -4px 0 10px; color: var(--muted); font-size: 13px; }
+.card .age-note { color: var(--brand); font-weight: 600; }
 
 .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .opt { position: relative; display: block; cursor: pointer; }
@@ -878,16 +879,29 @@ var TOOLS = {
     name: 'Waterlow',
     pdfTitle: 'Waterlow Score',
     pdfSub: 'Pressure injury risk assessment',
-    intro: 'Complete every section down to Mobility, then tick any special risks that apply. Where it says tick all that apply, each ticked item adds to the score. A higher score means higher risk. Hover over or tap any ? for an explanation.',
-    reference: 'Waterlow pressure ulcer prevention and treatment score card, 2005 revision. Malnutrition Screening Tool, Ferguson M et al, 1999.',
+    intro: 'Start with sex and age, as age sets the BMI bands. Complete every section down to Mobility, then tick any special risks that apply. Where it says tick all that apply, each ticked item adds to the score. A higher score means higher risk. Hover over or tap any ? for an explanation.',
+    reference: 'Waterlow score card, 2005 revision. Malnutrition Screening Tool, Ferguson M et al, 1999. Older adult BMI bands, Winter JE et al, Am J Clin Nutr 2014.',
     items: [
-      { id: 'build', title: 'Build and weight for height', type: 'single', required: true, bmi: true,
-        help: 'Based on body mass index (BMI), which is weight in kg divided by height in metres squared. If the BMI is unknown, use the calculator at the bottom of this section.',
+      { id: 'sex', title: 'Sex', type: 'single', required: true,
         options: [
-          { id: 'avg', score: 0, label: 'Average', sub: 'BMI 20 to 24.9' },
-          { id: 'above', score: 1, label: 'Above average', sub: 'BMI 25 to 29.9' },
-          { id: 'obese', score: 2, label: 'Obese', sub: 'BMI 30 and over' },
-          { id: 'below', score: 3, label: 'Below average', sub: 'BMI under 20' }
+          { id: 'm', score: 1, label: 'Male' },
+          { id: 'f', score: 2, label: 'Female' }
+        ]},
+      { id: 'age', title: 'Age', type: 'single', required: true,
+        options: [
+          { id: 'a1', score: 1, label: '14 to 49' },
+          { id: 'a2', score: 2, label: '50 to 64' },
+          { id: 'a3', score: 3, label: '65 to 74' },
+          { id: 'a4', score: 4, label: '75 to 80' },
+          { id: 'a5', score: 5, label: '81 and over' }
+        ]},
+      { id: 'build', title: 'Build and weight for height', type: 'single', required: true, bmi: true,
+        help: 'Based on body mass index (BMI), which is weight in kg divided by height in metres squared. For clients aged 65 and over, age adjusted bands are used because death and illness risk in older adults rises below a BMI of about 23 and only rises again above about 33 (Winter et al 2014). If the BMI is unknown, use the calculator at the bottom of this section.',
+        options: [
+          { id: 'avg', score: 0, label: 'Average', sub: 'BMI 20 to 24.9', subOld: 'BMI 23 to 29.9' },
+          { id: 'above', score: 1, label: 'Above average', sub: 'BMI 25 to 29.9', subOld: 'BMI 30 to 34.9' },
+          { id: 'obese', score: 2, label: 'Obese', sub: 'BMI 30 and over', subOld: 'BMI 35 and over' },
+          { id: 'below', score: 3, label: 'Below average', sub: 'BMI under 20', subOld: 'BMI under 23' }
         ]},
       { id: 'skin', title: 'Skin type, visual risk areas', type: 'multi', required: true, note: 'Tick all that apply.',
         help: 'Look at the skin over pressure areas such as the sacrum, buttocks, hips, heels and elbows. Tick every item that applies. Each ticked item adds to the score.',
@@ -906,19 +920,6 @@ var TOOLS = {
             help: 'Intact skin with persistent redness that does not blanch (fade) when pressed. Equivalent to a stage 1 pressure injury.' },
           { id: 'broken', score: 3, label: 'Broken or spots grade 2 to 4', excl: ['healthy'],
             help: 'Open skin, blisters or wounds over pressure areas. Equivalent to a stage 2, 3 or 4 pressure injury.' }
-        ]},
-      { id: 'sex', title: 'Sex', type: 'single', required: true,
-        options: [
-          { id: 'm', score: 1, label: 'Male' },
-          { id: 'f', score: 2, label: 'Female' }
-        ]},
-      { id: 'age', title: 'Age', type: 'single', required: true,
-        options: [
-          { id: 'a1', score: 1, label: '14 to 49' },
-          { id: 'a2', score: 2, label: '50 to 64' },
-          { id: 'a3', score: 3, label: '65 to 74' },
-          { id: 'a4', score: 4, label: '75 to 80' },
-          { id: 'a5', score: 5, label: '81 and over' }
         ]},
       { heading: 'Malnutrition Screening Tool (MST)',
         help: 'The Malnutrition Screening Tool is a quick Australian nutrition screen built into the Waterlow. Its score adds to the Waterlow total. An MST score over 2 means refer for nutrition assessment and intervention.' },
@@ -1065,12 +1066,13 @@ function renderTool(tool) {
       (it.required ? '' : '<span class="tag">Optional</span>') +
       '<span class="sec-score" data-score></span></div>';
     if (it.note) html += '<p class="note">' + esc(it.note) + '</p>';
+    if (it.bmi) html += '<p class="note age-note" id="build-age-note"></p>';
     html += '<div class="opts ' + (it.type === 'multi' ? 'multi' : 'single') + '">';
     it.options.forEach(function (o) {
       var showScore = !it.severity;
       html += '<label class="opt"><input type="' + type + '" name="' + nameOf(tool, it.id) + '" value="' + o.id + '">' +
         '<span class="opt-body"><span class="mark"></span><span class="opt-text"><span class="opt-label">' + esc(o.label) + '</span>' +
-        (o.sub ? '<span class="opt-sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
+        (o.sub ? '<span class="opt-sub"' + (o.subOld ? ' data-sub-std="' + esc(o.sub) + '" data-sub-old="' + esc(o.subOld) + '"' : '') + '>' + esc(o.sub) + '</span>' : '') + '</span>' +
         helpBtn(o.help, o.label) +
         (showScore ? '<span class="opt-score">' + o.score + '</span>' : '') +
         '</span></label>';
@@ -1100,6 +1102,22 @@ function renderTool(tool) {
 
 var bmiState = { value: null, h: null, w: null };
 
+function isOlder() {
+  return ['a3', 'a4', 'a5'].indexOf(selected('waterlow', 'age')[0]) > -1;
+}
+function ageBandNote() {
+  if (isOlder()) return 'Age adjusted bands for 65 and over in use';
+  if (selected('waterlow', 'age')[0]) return 'Standard adult bands in use (under 65)';
+  return 'Select age above. Age adjusted bands apply for 65 and over.';
+}
+function updateBuildLabels() {
+  var old = isOlder();
+  $$('#sec-waterlow-build [data-sub-std]').forEach(function (el) {
+    el.textContent = old ? el.getAttribute('data-sub-old') : el.getAttribute('data-sub-std');
+  });
+  $('#build-age-note').textContent = ageBandNote();
+}
+
 function calcBmi() {
   var h = parseFloat($('#bmi-h').value);
   var w = parseFloat($('#bmi-w').value);
@@ -1110,11 +1128,14 @@ function calcBmi() {
   if (h < 100 || h > 250) { out.className = 'bmi-out bad'; out.textContent = 'Check height. Enter it in centimetres, eg 165'; return; }
   if (w < 25 || w > 350) { out.className = 'bmi-out bad'; out.textContent = 'Check weight. Enter it in kilograms, eg 70'; return; }
   var bmi = Math.round((w / Math.pow(h / 100, 2)) * 10) / 10;
-  var band = bmi < 20 ? 'below' : bmi < 25 ? 'avg' : bmi < 30 ? 'above' : 'obese';
+  var old = isOlder();
+  var band = old
+    ? (bmi < 23 ? 'below' : bmi < 30 ? 'avg' : bmi < 35 ? 'above' : 'obese')
+    : (bmi < 20 ? 'below' : bmi < 25 ? 'avg' : bmi < 30 ? 'above' : 'obese');
   var opt = optDef(sectionDef('waterlow', 'build'), band);
   bmiState = { value: bmi, h: h, w: w };
   out.className = 'bmi-out ok';
-  out.textContent = 'BMI ' + bmi.toFixed(1) + ', ' + opt.label + ' (score ' + opt.score + ')';
+  out.textContent = 'BMI ' + bmi.toFixed(1) + ', ' + opt.label + (old ? ' for age 65 and over' : '') + ' (score ' + opt.score + ')';
   var input = $('input[name="waterlow_build"][value="' + band + '"]');
   if (input) input.checked = true;
 }
@@ -1166,9 +1187,16 @@ function compute(tool) {
       return { id: sid, item: item, answer: o.label + (withSub && o.sub ? ' (' + o.sub + ')' : ''), score: o.score };
     };
 
-    var build = single('build', 'Build and weight for height', true);
-    if (build.answer && bmiState.value) {
-      build.detail = 'BMI ' + bmiState.value.toFixed(1) + ' calculated from height ' + bmiState.h + ' cm and weight ' + bmiState.w + ' kg';
+    var build = single('build', 'Build and weight for height', false);
+    var bv = selected(tool, 'build')[0];
+    if (bv) {
+      var bo = optDef(sectionDef(tool, 'build'), bv);
+      var older = isOlder();
+      build.answer = bo.label + ' (' + (older ? bo.subOld : bo.sub) + ')';
+      var det = [];
+      if (bmiState.value) det.push('BMI ' + bmiState.value.toFixed(1) + ' calculated from height ' + bmiState.h + ' cm and weight ' + bmiState.w + ' kg.');
+      if (older) det.push('Age adjusted BMI bands used for 65 and over (Winter et al 2014).');
+      if (det.length) build.detail = det.join(' ');
     }
     rows.push(build);
 
@@ -1278,6 +1306,7 @@ function renderResults(r) {
 
 function update() {
   updateSections(current);
+  updateBuildLabels();
   var r = compute(current);
   renderResults(r);
   $('#bar-tool').textContent = TOOLS[current].name;
@@ -1581,6 +1610,7 @@ function onChange(e) {
   var form = input.closest('form');
   if (!form) return;
   var tool = form.getAttribute('data-tool');
+  if (input.name === 'waterlow_age' && bmiState.value) calcBmi();
   if (input.type === 'checkbox' && input.checked) {
     var sid = input.name.replace(tool + '_', '');
     var sec = sectionDef(tool, sid);
